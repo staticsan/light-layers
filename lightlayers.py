@@ -61,6 +61,8 @@ class LightLayer:
 	def ramp(self, globe_start, globe_end, first_time, overlap=100, mode="up"): # aka raise
 		"""Set an increasing brightness/transparency ramp
 		This call does NOT set colour.
+		first_time is how long the first light will take in milliseconds
+		overlap is the percentage overlap subsequent lights will take. Overlap of 100 will bring them all up at once.
 		"""
 		globe_start = self.limit(globe_start, 0, self.NUM_GLOBES-1)
 		globe_end = self.limit(globe_end, 0, self.NUM_GLOBES-1)
