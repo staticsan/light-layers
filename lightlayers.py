@@ -16,6 +16,7 @@ import colours
 
 class LightLayer:
 
+	remote = False
 	addr = ''
 	NUM_GLOBES = 50
 	stream = { }
@@ -27,6 +28,7 @@ class LightLayer:
 	def __init__(self, remote=False, addr=''):
 		"""Remote mode only, at the moment."""
 		if remote:
+			self.remote = True
 			self.addr = addr
 		self.stream[self.current_time] = [ [0, 0, 0, 0] for g in range(self.NUM_GLOBES) ] # red green blue transparency
 	
@@ -212,23 +214,20 @@ class LightLayer:
 		Local rendering is currently not supported.
 		"""
 		t = 0
-		delay = float(self.time_step) / 100
+		delay = float(self.time_step) / 1000 / 2
 
 		if (self.remote == True):
 			import requests, json
 
 			while t < self.current_time:
-				g = 0
 				globes = []
 				for c in self.stream[t]:
 					if c[3] == 100:
 						globes.append("#%02x%02x%02x" % (c[0], c[1], c[2]))
 					else:
 						globes.append("#%02x%02x%02x" % (c[0] * c[3]/100, c[1] * c[3]/100, c[2] * c[3]/100))
-					g += 1
-				self.hol.render()
-				message = { "lights": json.dumps(globes) }
-				r = request.put('http://%s/iotas/0.1/device/moorescloud.holiday/sim/setlights' % self.addr, data=message)
+				message = json.dumps({ "lights": globes })
+				r = requests.put('http://%s/iotas/0.1/device/moorescloud.holiday/localhost/setlights' % self.addr, data=message)
 				time.sleep(delay)
 				t += self.time_step
 		else:
