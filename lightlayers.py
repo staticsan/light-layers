@@ -154,7 +154,7 @@ class LightLayer:
 		inner_step = delay
 		while steps > 0:
 			c = start_from
-			for g in range(globe_start, globe_end):
+			for g in range(globe_start, globe_end+1):
 				self.stream[here][g] = [ colours[c][0], colours[c][1], colours[c][2], self.stream[here][g][3] ]
 				c += 1
 			inner_step -= self.time_step
@@ -165,7 +165,21 @@ class LightLayer:
 			here += self.time_step
 
 
-	# def rotate(self, 
+	def rotate(self, globe_start, globe_end, steps, distance, delay):
+		"""Rotate the colours of a subset of globes."""
+		globe_start = self.limit(globe_start, 0, self.NUM_GLOBES-1)
+		globe_end = self.limit(globe_end, 0, self.NUM_GLOBES-1)
+		span = globe_end - globe_start
+		if delay < 0:
+			delay = 0
+		if distance == 0:
+			return # whoops nothing to do!
+
+		colours = []
+		for g in range(globe_start, globe_end+1):
+			colours.append([ self.stream[self.current_time][g][0], self.stream[self.current_time][g][1], self.stream[self.current_time][g][2] ])
+		self.fill_to(self.current_time + steps * delay)
+		# while steps > 0:
 
 	# def shift(self, 
 
