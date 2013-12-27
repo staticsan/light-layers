@@ -57,7 +57,7 @@ class LightLayer:
 			col.append(self.limit(trans, 0, 100))
 			globe_start = self.limit(globe_start, 0, self.NUM_GLOBES-1)
 			globe_end = self.limit(globe_end, 0, self.NUM_GLOBES-1)
-			for g in range(globe_start, glob_end):
+			for g in range(globe_start, globe_end+1):
 				self.stream[self.current_time][g] = list(col)
 
 	def ramp(self, globe_start, globe_end, first_time, overlap=100, mode="up"): # aka raise
@@ -72,7 +72,7 @@ class LightLayer:
 
 		if first_time == 0:
 			for g in range(globe_start, globe_end+1):
-				self.stream[current_time][g][3] = 100
+				self.stream[current_time][g][3] = 0xff
 		else:
 			time_advance = first_time
 			time_overlap = int(time_advance * (100 - overlap)/100 / self.time_step) * self.time_step
@@ -85,9 +85,9 @@ class LightLayer:
 				while t <= gtime + time_advance:
 					# print "Setting %f:%d to %f" % (t, g, (t - gtime) / first_time)
 					if mode == "down":
-						self.stream[t][g][3] = int(100 - (t - gtime) / first_time * 100)
+						self.stream[t][g][3] = int(0xff - (t - gtime) / first_time * 0xff)
 					else:
-						self.stream[t][g][3] = int((t - gtime) / first_time * 100)
+						self.stream[t][g][3] = int((t - gtime) / first_time * 0xff)
 					t += self.time_step
 				gtime = gtime + time_overlap
 		return
@@ -224,7 +224,40 @@ class LightLayer:
 			print
 
 	def render(self):
-		"""Renders the output to a Holiday device.
+		self.render_rest()
+
+	def render_udp(self):
+		"""Renders the output to a Holiday device using UDP
+		Local rendering is currently not supported.
+		"""
+		t = 0
+		delay = float(self.time_step) / 1000  / 2
+
+                """The render routine sends out a UDP packet using the SecretAPI"""
+		if (self.remote == True):
+			import socket, array
+			port = 9988
+			sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+
+			while t < self.current_time:
+				packet = array.array('B', [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])  # initialize basic packet, ignore first 10 bytes
+				for c in self.stream[t]:
+					if c[3] == 0xff:
+						packet.append(c[0])
+						packet.append(c[1])
+						packet.append(c[2])
+					else:
+						packet.append((c[0] * c[3])>> 8)
+						packet.append((c[1] * c[3])>> 8)
+						packet.append((c[2] * c[3])>> 8)
+					sock.sendto(packet, (self.addr, port))
+				time.sleep(delay)
+				t += self.time_step
+		else:
+			self.go()
+
+	def render_rest(self):
+		"""Renders the output to a Holiday device using HTTP/REST
 		Local rendering is currently not supported.
 		"""
 		t = 0
@@ -239,7 +272,7 @@ class LightLayer:
 					if c[3] == 100:
 						globes.append("#%02x%02x%02x" % (c[0], c[1], c[2]))
 					else:
-						globes.append("#%02x%02x%02x" % (c[0] * c[3]/100, c[1] * c[3]/100, c[2] * c[3]/100))
+						globes.append("#%02x%02x%02x" % ((c[0] * c[3])>> 8, (c[1] * c[3])>> 8, (c[2] * c[3])>> 8))
 				message = json.dumps({ "lights": globes })
 				r = requests.put('http://%s/iotas/0.1/device/moorescloud.holiday/localhost/setlights' % self.addr, data=message)
 				time.sleep(delay)
